@@ -5,17 +5,18 @@ import (
 	"net/http"
 )
 
-func Index(c *gin.Context) {
+func RenderIndex(c *gin.Context) {
 	c.HTML(http.StatusOK, "index.html", nil)
 }
 
-func Login(c *gin.Context) {
+func RenderLogin(c *gin.Context) {
 	c.HTML(http.StatusOK, "login.html", nil)
 }
 
-func Create(c *gin.Context) {
+func RenderCreate(c *gin.Context) {
 	c.HTML(http.StatusOK, "create.html", nil)
 }
 
-func SaveFile(c *gin.Context) {
+func RenderUpload(c *gin.Context) {
+	c.HTML(http.StatusOK, "upload.html", nil)
 }

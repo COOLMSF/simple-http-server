@@ -1,6 +1,7 @@
 package post
 
 import (
+	"../../pkg"
 	"crypto/md5"
 	"database/sql"
 	"fmt"
@@ -12,24 +13,20 @@ import (
 )
 
 func Login(c *gin.Context) {
+
 	tableName := "user_passwd"
 	username := c.PostForm("username")
 	password := c.PostForm("password")
 	passwordMd5Form := fmt.Sprintf("%x", md5.Sum([]byte(password)))
 
-	c.HTML(http.StatusOK, "login.html", nil)
-	/**
-	 * Our login.html will send both GET and POST to the server, why?
-	 */
-
 	db, err := sql.Open("mysql", "root:hushanglai@tcp(localhost:3306)/web")
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("sql.Open: %v", err)
 	}
 	defer func(db *sql.DB) {
 		err := db.Close()
 		if err != nil {
-			log.Fatalf("Fail to close db:%v", err)
+			log.Printf("Fail to close db:%v", err)
 		}
 	}(db)
 
@@ -41,11 +38,11 @@ func Login(c *gin.Context) {
 	defer func(res *sql.Rows) {
 		err := res.Close()
 		if err != nil {
-			log.Fatalf("res.Close: %v", err)
+			log.Printf("res.Close: %v", err)
 		}
 	}(res)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("db.Query: %v", err)
 	}
 
 	var passwordMd5Mysql string
@@ -61,27 +58,31 @@ func Login(c *gin.Context) {
 		return
 	}
 	c.String(http.StatusOK, "Login successful")
+
+	/*
+	 * Save session
+	 */
+	pkg.SaveAuthSession(c, 123)
 }
 
 func Create(c *gin.Context) {
-	c.HTML(http.StatusOK, "create.html", nil)
 
 	err := c.Request.ParseForm()
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("c.Request.ParseForm: %v", err)
 	}
 
 	/*
-	 * Store username and password
+	 * Connect to mysql
 	 */
 	db, err := sql.Open("mysql", "root:hushanglai@tcp(localhost:3306)/web")
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("sql.Open: %v", err)
 	}
 	defer func(db *sql.DB) {
 		err := db.Close()
 		if err != nil {
-			log.Fatalf("Fail to close db:%v", err)
+			log.Printf("Fail to close db:%v", err)
 		}
 	}(db)
 
@@ -111,33 +112,31 @@ func Create(c *gin.Context) {
 		/*
 		 * Store username and password to mysql
 		 */
-		// Sql injection???
+		// Sql injection?
 		sqlString := fmt.Sprintf("insert into %s (%s, %s) values (\"%s\", \"%s\")",
 			tableName, field1, field2, username, password)
-		c.String(http.StatusOK, sqlString)
 		_, err = db.Exec(sqlString)
 		if err != nil {
-			log.Fatalf("create account in mysql: %v", err)
+			log.Printf("create account in mysql: %v", err)
 		}
 	}
 
 	_, err = fmt.Fprintf(c.Writer, "Created successful!\nBecareful with your password?")
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
 	}
 }
 
-func SaveFile(c *gin.Context) {
-	file, err := c.FormFile("file")
-	if err != nil {
-		log.Fatalf("c.FormFile: %v", err)
-	}
-	log.Printf("filename: %v", file.Filename)
+func Upload(c *gin.Context) {
 
-	err = c.SaveUploadedFile(file, "saved/" + file.Filename)
+	file, _ := c.FormFile("file")
+	log.Println(file.Filename)
+
+	// Upload the file to specific dst.
+	err := c.SaveUploadedFile(file, "upload/" + file.Filename)
 	if err != nil {
-		log.Fatalf("c.SaveUploadedFile: %v", err)
+		log.Printf("c.SaveUploadedFile: %v", err)
 	}
 
-	c.String(http.StatusOK, "save file ok")
+	c.String(http.StatusOK, fmt.Sprintf("'%s' uploaded!", file.Filename))
 }
